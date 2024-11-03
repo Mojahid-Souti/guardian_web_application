@@ -1,0 +1,49 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <InvariantGlobalization>false</InvariantGlobalization>
+    <SpaRoot>..\guardian_web_application.client</SpaRoot>
+    <SpaProxyLaunchCommand>npm run dev</SpaProxyLaunchCommand>
+    <SpaProxyServerUrl>https://localhost:5173</SpaProxyServerUrl>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Content Remove="wwwroot\assets\index-BHLcKMVy.css" />
+    <Content Remove="wwwroot\assets\index-Boxrr9Ij.js" />
+    <Content Remove="wwwroot\index.html" />
+    <Content Remove="wwwroot\vite.svg" />
+  </ItemGroup>
+
+     <ItemGroup>
+          <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
+          <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.0" />
+          <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.0" />
+          <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.0">
+               <PrivateAssets>all</PrivateAssets>
+               <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+          </PackageReference>
+          <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.0" />
+          <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.0">
+               <PrivateAssets>all</PrivateAssets>
+               <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+          </PackageReference>
+     </ItemGroup>
+
+
+     <ItemGroup>
+    <ProjectReference Include="..\guardian_web_application.client\guardian_web_application.client.esproj">
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+    </ProjectReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="wwwroot\assets\index-BHLcKMVy.css" />
+    <None Include="wwwroot\assets\index-Boxrr9Ij.js" />
+    <None Include="wwwroot\index.html" />
+    <None Include="wwwroot\vite.svg" />
+  </ItemGroup>
+
+</Project>

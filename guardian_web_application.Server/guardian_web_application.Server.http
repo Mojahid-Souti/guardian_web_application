@@ -1,0 +1,6 @@
+@guardian_web_application.Server_HostAddress = http://localhost:5264
+
+GET {{guardian_web_application.Server_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
