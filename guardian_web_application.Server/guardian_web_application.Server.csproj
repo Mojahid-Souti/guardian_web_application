@@ -1,49 +1,65 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
-
-  <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <InvariantGlobalization>false</InvariantGlobalization>
-    <SpaRoot>..\guardian_web_application.client</SpaRoot>
-    <SpaProxyLaunchCommand>npm run dev</SpaProxyLaunchCommand>
-    <SpaProxyServerUrl>https://localhost:5173</SpaProxyServerUrl>
-  </PropertyGroup>
-
-  <ItemGroup>
-    <Content Remove="wwwroot\assets\index-BHLcKMVy.css" />
-    <Content Remove="wwwroot\assets\index-Boxrr9Ij.js" />
-    <Content Remove="wwwroot\index.html" />
-    <Content Remove="wwwroot\vite.svg" />
-  </ItemGroup>
+     <PropertyGroup>
+          <TargetFramework>net8.0</TargetFramework>
+          <Nullable>enable</Nullable>
+          <ImplicitUsings>enable</ImplicitUsings>
+          <InvariantGlobalization>false</InvariantGlobalization>
+          <SpaRoot>..\guardian_web_application.client</SpaRoot>
+          <SpaProxyLaunchCommand>npm run dev</SpaProxyLaunchCommand>
+          <SpaProxyServerUrl>https://localhost:5173</SpaProxyServerUrl>
+     </PropertyGroup>
 
      <ItemGroup>
-          <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
-          <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.0" />
-          <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.0" />
-          <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.0">
-               <PrivateAssets>all</PrivateAssets>
-               <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-          </PackageReference>
-          <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.0" />
-          <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.0">
-               <PrivateAssets>all</PrivateAssets>
-               <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-          </PackageReference>
+          <Content Remove="wwwroot\assets\audiowide-latin-400-normal-6GFCX7ni.woff2" />
+          <Content Remove="wwwroot\assets\audiowide-latin-400-normal-D6mHIfnv.woff" />
+          <Content Remove="wwwroot\assets\audiowide-latin-ext-400-normal-DBtZvUqR.woff" />
+          <Content Remove="wwwroot\assets\audiowide-latin-ext-400-normal-vZLf3piE.woff2" />
+          <Content Remove="wwwroot\assets\index-CpNKGAj1.css" />
+          <Content Remove="wwwroot\assets\index-DN2CGM25.js" />
+          <Content Remove="wwwroot\assets\logo-DW-4-t6A.png" />
+          <Content Remove="wwwroot\assets\logo_d-cbiNVSGP.png" />
+          <Content Remove="wwwroot\index.html" />
+          <Content Remove="wwwroot\vite.svg" />
      </ItemGroup>
 
+     <ItemGroup>
+          <PackageReference Include="CsvHelper" Version="33.0.1" />
+          <PackageReference Include="Microsoft.AspNetCore.Cors" Version="2.2.0" />
+          <PackageReference Include="Microsoft.AspNetCore.SpaProxy" Version="8.0.0" />
+          <PackageReference Include="Microsoft.AspNetCore.SpaServices.Extensions" Version="8.0.0" />
+          <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.0" />
+          <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
+          <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.10" />
+          <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.10" />
+          <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.10" />
+          <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.10">
+               <PrivateAssets>all</PrivateAssets>
+               <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+          </PackageReference>
+          <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.10">
+               <PrivateAssets>all</PrivateAssets>
+               <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+          </PackageReference>
+          <PackageReference Include="itext7" Version="8.0.2" />
+     </ItemGroup>
 
      <ItemGroup>
-    <ProjectReference Include="..\guardian_web_application.client\guardian_web_application.client.esproj">
-      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
-    </ProjectReference>
-  </ItemGroup>
+          <ProjectReference Include="..\guardian_web_application.client\guardian_web_application.client.esproj">
+               <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+          </ProjectReference>
+     </ItemGroup>
 
-  <ItemGroup>
-    <None Include="wwwroot\assets\index-BHLcKMVy.css" />
-    <None Include="wwwroot\assets\index-Boxrr9Ij.js" />
-    <None Include="wwwroot\index.html" />
-    <None Include="wwwroot\vite.svg" />
-  </ItemGroup>
+     <ItemGroup>
+          <None Include="wwwroot\assets\audiowide-latin-400-normal-6GFCX7ni.woff2" />
+          <None Include="wwwroot\assets\audiowide-latin-400-normal-D6mHIfnv.woff" />
+          <None Include="wwwroot\assets\audiowide-latin-ext-400-normal-DBtZvUqR.woff" />
+          <None Include="wwwroot\assets\audiowide-latin-ext-400-normal-vZLf3piE.woff2" />
+          <None Include="wwwroot\assets\index-CpNKGAj1.css" />
+          <None Include="wwwroot\assets\index-DN2CGM25.js" />
+          <None Include="wwwroot\assets\logo-DW-4-t6A.png" />
+          <None Include="wwwroot\assets\logo_d-cbiNVSGP.png" />
+          <None Include="wwwroot\index.html" />
+          <None Include="wwwroot\vite.svg" />
+     </ItemGroup>
 
 </Project>

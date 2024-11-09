@@ -1,72 +1,163 @@
-using guardian_web_application.Server.Data;
-using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;
-using System.Security.Claims;
+using guardian_web_application.Server.Data;
+using guardian_web_application.Server.Services;
+using Microsoft.AspNetCore.Cors;
+using System.Reflection;
 
-namespace guardian_web_application.Server
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddHttpsRedirection(options =>
 {
-    public class Program
+    options.HttpsPort = 7024;
+});
+
+// Add services to the container
+builder.Services.AddRazorPages();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
     {
-        public static void Main(string[] args)
+        options.JsonSerializerOptions.PropertyNamingPolicy = null;
+    });
+
+// Configure CORS with additional headers
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowViteClient", policy =>
+    {
+        policy.WithOrigins(
+                "https://localhost:5173",
+                "http://localhost:5173",
+                "https://localhost:7024",
+                "http://localhost:5264"
+            )
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials()
+            .WithExposedHeaders("Location")
+            .SetIsOriginAllowed(_ => true);
+    });
+});
+
+// Add services
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IPacketService, PacketService>();
+builder.Services.AddScoped<IAnalyticsService, AnalyticsService>();
+
+// Configure Authentication
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(options =>
+    {
+        options.LoginPath = "/Auth/Login";
+        options.LogoutPath = "/Auth/Logout";
+        options.AccessDeniedPath = "/Auth/Login";
+        options.Cookie.Name = "GuardianAuth";
+        options.Cookie.HttpOnly = true;
+        options.Cookie.SameSite = SameSiteMode.Lax;
+        options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+        options.ExpireTimeSpan = TimeSpan.FromHours(24);
+        options.SlidingExpiration = true;
+        options.Events = new CookieAuthenticationEvents
         {
-            var builder = WebApplication.CreateBuilder(args);
-
-            var connectionString = builder.Configuration.GetConnectionString("ApplicationDbContextConnection") ?? throw new InvalidOperationException("Connection string 'ApplicationDbContextConnection' not found.");
-
-            builder.Services.AddDbContext<ApplicationDbContext>(options => options.UseSqlServer(connectionString));
-
-            builder.Services.AddAuthorization();
-            builder.Services.AddIdentityApiEndpoints<ApplicationUser>()
-                .AddEntityFrameworkStores<ApplicationDbContext>();
-
-
-            // Add services to the container.
-            builder.Services.AddControllers();
-            builder.Services.AddEndpointsApiExplorer();
-            builder.Services.AddSwaggerGen();
-
-            var app = builder.Build();
-
-            // Use default files and static files to serve the React app
-            app.UseDefaultFiles(); // This serves the index.html file from wwwroot
-            app.UseStaticFiles(); // Enables serving static files from wwwroot
-            app.MapIdentityApi<ApplicationUser>();
-
-
-            app.MapPost("/logout", async (SignInManager<ApplicationUser> signInManager) =>
+            OnRedirectToLogin = context =>
             {
-
-                await signInManager.SignOutAsync();
-                return Results.Ok();
-
-            }).RequireAuthorization();
-
-
-            app.MapGet("/pingauth", (ClaimsPrincipal user) =>
-            {
-                var email = user.FindFirstValue(ClaimTypes.Email); // get the user's email from the claim
-                return Results.Json(new { Email = email }); ; // return the email as a plain text response
-            }).RequireAuthorization();
-
-
-            // Configure the HTTP request pipeline.
-            if (app.Environment.IsDevelopment())
-            {
-                app.UseSwagger();
-                app.UseSwaggerUI();
+                if (context.Request.Path.StartsWithSegments("/api"))
+                {
+                    context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                    return Task.CompletedTask;
+                }
+                context.Response.Redirect(context.RedirectUri);
+                return Task.CompletedTask;
             }
+        };
+    });
 
-            app.UseHttpsRedirection();
+builder.Services.AddAuthorization();
 
-            app.UseAuthorization();
+var app = builder.Build();
 
-            // Map controllers
-            app.MapControllers();
+// Development specific configuration
+if (app.Environment.IsDevelopment())
+{
+    app.UseDeveloperExceptionPage();
 
-            // Fallback to serve the React app
-            app.MapFallbackToFile("index.html"); // This assumes index.html is served from wwwroot
+    // Add CORS middleware for development
+    app.Use(async (context, next) =>
+    {
+        context.Response.Headers.Add("Access-Control-Allow-Origin", "https://localhost:5173");
+        context.Response.Headers.Add("Access-Control-Allow-Credentials", "true");
+        context.Response.Headers.Add("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+        context.Response.Headers.Add("Access-Control-Allow-Headers", "Content-Type, Authorization");
 
-            app.Run();
+        if (context.Request.Method == "OPTIONS")
+        {
+            context.Response.StatusCode = 200;
+            return;
         }
-    }
+
+        await next();
+    });
 }
+else
+{
+    app.UseExceptionHandler("/Error");
+    app.UseHsts();
+}
+
+app.UseHttpsRedirection();
+app.UseStaticFiles();
+app.UseRouting();
+
+app.UseCors("AllowViteClient");
+
+app.UseAuthentication();
+app.UseAuthorization();
+
+// Root redirect with proper async
+app.MapGet("/", async (HttpContext context) =>
+{
+    await Task.Yield();
+    if (context.User.Identity?.IsAuthenticated ?? false)
+    {
+        return Results.Redirect($"{app.Configuration["Spa:ClientUrl"]}/app");
+    }
+    return Results.Redirect("/Auth/Login");
+});
+
+// Configure API endpoints with CORS
+app.MapControllers().RequireCors("AllowViteClient");
+app.MapRazorPages();
+
+// Health check endpoint
+app.MapGet("/api/health", async () =>
+{
+    await Task.Yield();
+    return Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow });
+})
+.RequireCors("AllowViteClient")
+.AllowAnonymous();
+
+// SPA routes handling
+if (app.Environment.IsDevelopment())
+{
+    app.Use(async (context, next) =>
+    {
+        if (context.Request.Path.StartsWithSegments("/app"))
+        {
+            await Task.Yield();
+            if (context.User.Identity?.IsAuthenticated ?? false)
+            {
+                var targetUrl = $"{app.Configuration["Spa:ClientUrl"]}{context.Request.Path}{context.Request.QueryString}";
+                context.Response.Redirect(targetUrl);
+                return;
+            }
+            context.Response.Redirect("/Auth/Login");
+            return;
+        }
+        await next();
+    });
+}
+
+await app.RunAsync(); // Use RunAsync instead of Run

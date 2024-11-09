@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { BsArrowLeftShort } from "react-icons/bs";
 import { IoMdSettings } from "react-icons/io";
 import { TbLogout2 } from "react-icons/tb";
@@ -8,23 +9,26 @@ import { RxDashboard } from "react-icons/rx";
 import { GrAnalytics } from "react-icons/gr";
 import logo from '@/assets/logo_d.png';
 import "@fontsource/audiowide";
-import { AuthorizedUser } from "./AuthorizeView";
-import LogoutLink from "./LogoutLink";
 
 interface NavbarProps {
-     selectedPage: string;
-     onSelectPage: (page: string) => void;
+     onLogout: () => Promise<void>;
 }
 
-const Navbar: React.FC<NavbarProps> = ({ selectedPage, onSelectPage }) => {
+const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
      const [open, setOpen] = useState(true);
+     const navigate = useNavigate();
+     const location = useLocation();
 
      const Menus = [
-          { title: "Home", icon: <TiHomeOutline /> },
-          { title: "Dashboard", icon: <RxDashboard /> },
-          { title: "Analytics", icon: <GrAnalytics /> },
-          { title: "Settings", icon: <IoMdSettings /> },
+          { title: "Home", icon: <TiHomeOutline />, path: "/" },
+          { title: "Dashboard", icon: <RxDashboard />, path: "/dashboard" },
+          { title: "Analytics", icon: <GrAnalytics />, path: "/analytics" },
+          { title: "Settings", icon: <IoMdSettings />, path: "/settings" },
      ];
+
+     const handleNavigate = (path: string) => {
+          navigate(path);
+     };
 
      return (
           <div className="z-20 flex bg-gray-50">
@@ -48,9 +52,11 @@ const Navbar: React.FC<NavbarProps> = ({ selectedPage, onSelectPage }) => {
                          {Menus.map((menu, index) => (
                               <li
                                    key={index}
-                                   className={`text-sm flex items-center gap-x-4 p-2 mb-3 cursor-pointer rounded-md transition-all duration-300 ${selectedPage === menu.title ? "bg-gray-700 text-white" : "text-gray-300 hover:bg-gray-700 hover:text-white"
+                                   className={`text-sm flex items-center gap-x-4 p-2 mb-3 cursor-pointer rounded-md transition-all duration-300 ${location.pathname === menu.path
+                                        ? "bg-gray-700 text-white"
+                                        : "text-gray-300 hover:bg-gray-700 hover:text-white"
                                         }`}
-                                   onClick={() => onSelectPage(menu.title)}
+                                   onClick={() => handleNavigate(menu.path)}
                               >
                                    <div className="relative group">
                                         <span className="block float-left text-2xl">{menu.icon}</span>
@@ -66,6 +72,7 @@ const Navbar: React.FC<NavbarProps> = ({ selectedPage, onSelectPage }) => {
                     </ul>
 
                     {/* Logout Button */}
+                    {/* Logout Button */}
                     <div className="mt-auto">
                          <ul>
                               <li className="pb-3">
@@ -80,6 +87,7 @@ const Navbar: React.FC<NavbarProps> = ({ selectedPage, onSelectPage }) => {
                               </li>
                               <li
                                    className="flex items-center p-2 text-sm text-gray-300 transition-all duration-500 rounded-md cursor-pointer gap-x-4 hover:bg-gray-700 hover:text-white"
+                                   onClick={() => onLogout()}
                               >
                                    <div className="relative group">
                                         <span className="block float-left text-2xl"><TbLogout2 /></span>
@@ -90,7 +98,7 @@ const Navbar: React.FC<NavbarProps> = ({ selectedPage, onSelectPage }) => {
                                         )}
                                    </div>
                                    <span className={`text-lg font-medium flex-1 ${!open && "hidden"}`}>
-                                        <LogoutLink>Logout <AuthorizedUser value="email" /></LogoutLink>
+                                        Logout
                                    </span>
                               </li>
                          </ul>

@@ -1,0 +1,9 @@
+import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+import { Button } from "@/components/ui/button";
+import { ArrowRight } from 'lucide-react';
+import "@fontsource/audiowide";
+import ParticlesContainer from "@/components/ParticlesBackground";
+const Home = ({ title }) => {
+    return (_jsx("div", { className: "relative flex flex-col items-center justify-center w-full min-h-screen p-5 bg-gray-100 lg:p-5", children: _jsxs("div", { className: "relative z-10 w-full h-full p-3 overflow-hidden duration-300 bg-white rounded-lg shadow-md", children: [_jsx("div", { className: "absolute inset-0", children: _jsx(ParticlesContainer, {}) }), _jsxs("div", { className: "relative z-10", children: [_jsx("div", { className: "relative flex items-center justify-between w-full pt-3 pb-3", children: _jsx("h1", { className: "text-2xl font-normal text-left text-gray-800 font-poppins", children: title }) }), _jsx("div", { className: "relative left-0 right-0 top-18", children: _jsx("div", { className: "w-full border-b border-gray-300 opacity-30" }) }), _jsx("div", { className: "relative z-10 flex flex-col items-center justify-center p-36", children: _jsxs("div", { className: "space-y-6 text-center", children: [_jsxs("h1", { className: "mb-4 text-6xl font-medium text-black origin-left font-audiowide", children: ["Welcome to", _jsx("span", { className: "font-bold text-transparent bg-gradient-to-br from-orange-400 to-pink-500 bg-clip-text", children: " G" }), "UARDIAN"] }), _jsx("p", { className: "max-w-2xl mx-auto mb-12 text-xl text-zinc-600", children: "Your Intelligent Defense System for Network Security" }), _jsxs(Button, { className: "gap-2 px-8 py-6 text-lg transition-all duration-300 shadow-lg bg-gradient-to-r from-orange-400 to-pink-500 hover:from-orange-500 hover:to-pink-600 hover:shadow-xl", children: ["Get Started", _jsx(ArrowRight, { className: "w-5 h-5" })] })] }) })] })] }) }));
+};
+export default Home;

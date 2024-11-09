@@ -54,26 +54,25 @@ module.exports = {
      				'5': 'hsl(var(--chart-5))'
      			}
      		}
-          },
-          fontFamily: {
-               audiowide: ['Audiowide', 'cursive'],
-               inter: ['Inter', 'sans-serif'],
-               roboto: ['Roboto', 'sans-serif'],
-               openSans: ['Open Sans', 'sans-serif'],
-               lato: ['Lato', 'sans-serif'],
-               montserrat: ['Montserrat', 'sans-serif'],
-               merriweather: ['Merriweather', 'serif'],
-               georgia: ['Georgia', 'serif'],
-               playfair: ['Playfair Display', 'serif'],
-               times: ['Times New Roman', 'serif'],
-               poppins: ['Poppins', 'sans-serif'],
-               oswald: ['Oswald', 'sans-serif'],
-               bebas: ['Bebas Neue', 'cursive'],
-               audiowide: ['Audiowide', 'cursive'],
-               courier: ['Courier New', 'monospace'],
-               sourceCode: ['Source Code Pro', 'monospace'],
-               jetBrains: ['JetBrains Mono', 'monospace'],
-          }
+     	},
+     	fontFamily: {
+     		audiowide: ['Audiowide', 'cursive'],
+     		inter: ['Inter', 'sans-serif'],
+     		roboto: ['Roboto', 'sans-serif'],
+     		openSans: ['Open Sans', 'sans-serif'],
+     		lato: ['Lato', 'sans-serif'],
+     		montserrat: ['Montserrat', 'sans-serif'],
+     		merriweather: ['Merriweather', 'serif'],
+     		georgia: ['Georgia', 'serif'],
+     		playfair: ['Playfair Display', 'serif'],
+     		times: ['Times New Roman', 'serif'],
+     		poppins: ['Poppins', 'sans-serif'],
+     		oswald: ['Oswald', 'sans-serif'],
+     		bebas: ['Bebas Neue', 'cursive'],
+     		courier: ['Courier New', 'monospace'],
+     		sourceCode: ['Source Code Pro', 'monospace'],
+     		jetBrains: ['JetBrains Mono', 'monospace']
+     	}
      },
      plugins: [require("tailwindcss-animate")],
 };

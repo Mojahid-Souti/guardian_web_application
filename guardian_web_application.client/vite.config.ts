@@ -1,64 +1,105 @@
-import { fileURLToPath, URL } from 'node:url';
 import { defineConfig } from 'vite';
-import plugin from '@vitejs/plugin-react';
-import fs from 'fs';
+import react from '@vitejs/plugin-react';
 import path from 'path';
-import { env } from 'process';
+import fs from 'fs';
+import { spawnSync } from 'child_process';
+import type { ProxyOptions } from 'vite';
 
-const baseFolder =
-     env.APPDATA !== undefined && env.APPDATA !== ''
-          ? `${env.APPDATA}/ASP.NET/https`
-          : `${env.HOME}/.aspnet/https`;
+const baseFolder = process.env.APPDATA
+     ? `${process.env.APPDATA}/ASP.NET/https`
+     : `${process.env.HOME}/.aspnet/https`;
 
-const certificateName = "guardian_ids_web_app.client";
+const certificateName = "guardian_web_application.client";
+const certFilePath = path.join(baseFolder, `${certificateName}.pem`);
+const keyFilePath = path.join(baseFolder, `${certificateName}.key`);
 
-// Uncomment these lines if you plan to use HTTPS in your dev server
-// const certFilePath = path.join(baseFolder, `${certificateName}.pem`);
-// const keyFilePath = path.join(baseFolder, `${certificateName}.key`);
+// Create certificates if they don't exist
+if (!fs.existsSync(certFilePath) || !fs.existsSync(keyFilePath)) {
+     const result = spawnSync('dotnet', [
+          'dev-certs',
+          'https',
+          '--export-path',
+          certFilePath,
+          '--format',
+          'Pem',
+          '--no-password',
+     ], { stdio: 'inherit' });
 
-// Only use HTTPS in development if the cert files exist
-const useHttps = fs.existsSync(path.join(baseFolder, `${certificateName}.pem`)) &&
-     fs.existsSync(path.join(baseFolder, `${certificateName}.key`));
+     if (result.status !== 0) {
+          throw new Error("Could not create certificate.");
+     }
+}
 
+// Define proxy configuration
+const apiProxy: ProxyOptions = {
+     target: 'https://localhost:7024',
+     secure: false,
+     changeOrigin: true,
+     configure: (proxy) => {
+          proxy.on('error', (err) => {
+               console.log('proxy error', err);
+          });
+          proxy.on('proxyReq', (proxyReq) => {
+               // Add CORS headers to the proxy request
+               proxyReq.setHeader('Access-Control-Allow-Origin', 'https://localhost:5173');
+               proxyReq.setHeader('Access-Control-Allow-Credentials', 'true');
+          });
+          proxy.on('proxyRes', (proxyRes) => {
+               // Add CORS headers to the proxy response
+               proxyRes.headers['access-control-allow-origin'] = 'https://localhost:5173';
+               proxyRes.headers['access-control-allow-credentials'] = 'true';
+          });
+     }
+};
 
-// https://vitejs.dev/config/
+// Configuration
 export default defineConfig({
-     plugins: [plugin()],
+     plugins: [
+          react({
+               // Enable Fast Refresh
+               fastRefresh: true,
+          })
+     ],
+     base: '/app/',
      resolve: {
           alias: {
-               '@': fileURLToPath(new URL('./src', import.meta.url))
+               '@': path.resolve(__dirname, './src')
           }
      },
      server: {
+          port: 5173,
+          https: {
+               key: fs.readFileSync(keyFilePath),
+               cert: fs.readFileSync(certFilePath),
+          },
           proxy: {
-               '^/weatherforecast': {
-                    target: 'https://localhost:7272',
-                    secure: false,
+               '/api': {
+                    ...apiProxy,
+                    rewrite: (path) => path.replace(/^\/api/, '/api')
                },
-               '^/pingauth': {
-                    target: 'https://localhost:7272/',
-                    secure: false
-               },
-               '/login': {
-                    target: 'http://localhost:5264', // Change to the new port
-                    changeOrigin: true,
-                    secure: false,
-               },
-               '/register': {
-                    target: 'http://localhost:5264', // Change to the new port
-                    changeOrigin: true,
-                    secure: false,
-               },
-               '^/logout': {
-                    target: 'https://localhost:7272/',
-                    secure: false
+               '/Auth': {
+                    ...apiProxy,
+                    rewrite: (path) => path.replace(/^\/Auth/, '/Auth')
                }
           },
-          port: 5173,
-          // Use the following configuration for HTTPS
-          https: useHttps ? {
-               key: fs.readFileSync(path.join(baseFolder, `${certificateName}.key`)),
-               cert: fs.readFileSync(path.join(baseFolder, `${certificateName}.pem`)),
-          } : undefined, // Use undefined if not using HTTPS
+          watch: {
+               usePolling: true,
+               interval: 1000
+          },
+          hmr: {
+               protocol: 'wss',
+               host: 'localhost',
+               port: 5173,
+               clientPort: 5173,
+          }
+     },
+     optimizeDeps: {
+          include: ['react', 'react-dom', 'react-router-dom']
+     },
+     build: {
+          sourcemap: true,
+          commonjsOptions: {
+               include: []
+          }
      }
 });

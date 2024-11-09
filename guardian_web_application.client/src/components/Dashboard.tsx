@@ -1,325 +1,200 @@
-import React, { useState } from "react";
-
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import React, { useState, useEffect, useCallback } from "react";
+import { fetchPackets, fetchStats, fetchTrends, fetchTypes, ignorePacket } from '@/api/dashboard';
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from "@/components/ui/card";
-import { FaNetworkWired, FaShieldAlt, FaUserShield, FaTrafficLight } from "react-icons/fa";
 import {
-     XAxis,
-     YAxis,
-     CartesianGrid,
-     Tooltip,
-     ResponsiveContainer,
-     BarChart,
-     Bar,
-     Legend,
-     Area,
-     AreaChart,
+     XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+     BarChart, Bar, Legend, Area, AreaChart
 } from "recharts";
 import {
-     DropdownMenu,
-     DropdownMenuContent,
-     DropdownMenuItem,
-     DropdownMenuTrigger,
+     DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
-import { MoreVertical } from "lucide-react"
+import {
+     Pagination,
+     PaginationContent,
+     PaginationItem,
+} from "@/components/ui/pagination";
 
-const packetData: PacketEntry[] = [
-     {
-          id: 1,
-          src: "192.168.1.100",
-          dst: "10.0.0.15",
-          port: 443,
-          service: "HTTPS",
-          info: "TLS Handshake",
-          attack: "None",
-          threatLevel: "low",
-     },
-     {
-          id: 2,
-          src: "172.16.0.50",
-          dst: "192.168.1.200",
-          port: 80,
-          service: "HTTP",
-          info: "SQL Injection Attempt",
-          attack: "SQL Injection",
-          threatLevel: "critical",
-     },
-     {
-          id: 3,
-          src: "10.0.0.25",
-          dst: "192.168.1.150",
-          port: 22,
-          service: "SSH",
-          info: "Brute Force Attempt",
-          attack: "Brute Force",
-          threatLevel: "high",
-     },
-     {
-          id: 4,
-          src: "192.168.1.75",
-          dst: "10.0.0.100",
-          port: 3306,
-          service: "MySQL",
-          info: "Suspicious Query",
-          attack: "Potential Data Leak",
-          threatLevel: "medium",
-     },
-     {
-          id: 5,
-          src: "192.168.1.75",
-          dst: "10.0.0.100",
-          port: 3306,
-          service: "MySQL",
-          info: "Suspicious Query",
-          attack: "Potential Data Leak",
-          threatLevel: "medium",
-     },
-     {
-          id: 6,
-          src: "192.168.1.75",
-          dst: "10.0.0.100",
-          port: 3306,
-          service: "MySQL",
-          info: "Suspicious Query",
-          attack: "Potential Data Leak",
-          threatLevel: "medium",
-     },
-     {
-          id: 7,
-          src: "192.168.1.75",
-          dst: "10.0.0.100",
-          port: 3306,
-          service: "MySQL",
-          info: "Suspicious Query",
-          attack: "Potential Data Leak",
-          threatLevel: "medium",
-     },
-     {
-          id: 4,
-          src: "192.168.1.75",
-          dst: "10.0.0.100",
-          port: 3306,
-          service: "MySQL",
-          info: "Suspicious Query",
-          attack: "Potential Data Leak",
-          threatLevel: "medium",
-     },
-];
-// Enhanced sample data for the line chart
-const intrusionTrendData = [
-     { name: "Jan", detected: 65, blocked: 45, average: 55 },
-     { name: "Feb", detected: 59, blocked: 40, average: 49.5 },
-     { name: "Mar", detected: 80, blocked: 70, average: 75 },
-     { name: "Apr", detected: 81, blocked: 75, average: 78 },
-     { name: "May", detected: 56, blocked: 48, average: 52 },
-     { name: "Jun", detected: 55, blocked: 45, average: 50 },
-     { name: "Jul", detected: 40, blocked: 35, average: 37.5 },
-];
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Loader, MoreVertical } from "lucide-react";
+import { PacketEntry, IntrusionTrend, IntrusionType, PageProps } from '@/types/dashboard';
+import { StatsCards } from './Dashboard/StatsCards';
+import { ThreatBadge } from './Dashboard/ThreatBadge';
+import { CustomTooltip } from './Dashboard/CustomTooltip';
 
-// Enhanced sample data for the bar chart
-const intrusionTypeData = [
-     { name: "SQL Injection", count: 28, severity: "High", risk: 85 },
-     { name: "XSS Attacks", count: 23, severity: "High", risk: 80 },
-     { name: "DDoS", count: 15, severity: "Critical", risk: 95 },
-     { name: "Brute Force", count: 32, severity: "Medium", risk: 70 },
-     { name: "File Inclusion", count: 12, severity: "High", risk: 75 },
-];
-// Define the type for the payload entries
-interface PayloadEntry {
-     name: string;
-     value: number;
-     color: string; // Adjust according to your actual data structure
+interface PaginationControlsProps {
+     currentPage: number;
+     totalPages: number;
+     onPageChange: (page: number) => void;
 }
 
-interface ThreatBadgeProps {
-     level: 'low' | 'medium' | 'high' | 'critical'; // Define the allowed levels
-}
-
-const ThreatBadge: React.FC<ThreatBadgeProps> = ({ level }) => {
-     const colors = {
-          low: "bg-green-100 text-green-800",
-          medium: "bg-yellow-100 text-yellow-800",
-          high: "bg-orange-100 text-orange-800",
-          critical: "bg-red-100 text-red-800",
-     };
-
+const PaginationControls: React.FC<PaginationControlsProps> = ({
+     currentPage,
+     totalPages,
+     onPageChange
+}) => {
      return (
-          <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${colors[level]}`}>
-               {level.charAt(0).toUpperCase() + level.slice(1)}
-          </div>
+          <Pagination>
+               <PaginationContent>
+                    <PaginationItem>
+                         <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => onPageChange(Math.max(currentPage - 1, 1))}
+                              disabled={currentPage === 1}
+                              className="gap-1"
+                         >
+                              <ChevronLeft className="h-4 w-4" />
+                              Previous
+                         </Button>
+                    </PaginationItem>
+                    <PaginationItem>
+                         <span className="flex h-9 items-center px-4 text-sm">
+                              Page {currentPage} of {totalPages}
+                         </span>
+                    </PaginationItem>
+                    <PaginationItem>
+                         <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => onPageChange(Math.min(currentPage + 1, totalPages))}
+                              disabled={currentPage === totalPages}
+                              className="gap-1"
+                         >
+                              Next
+                              <ChevronRight className="h-4 w-4" />
+                         </Button>
+                    </PaginationItem>
+               </PaginationContent>
+          </Pagination>
      );
 };
-
-// Custom tooltip styles
-const CustomTooltip: React.FC<{ active?: boolean; payload?: PayloadEntry[]; label?: string }> = ({ active, payload, label }) => {
-     if (active && payload && payload.length) {
-          return (
-               <div className="p-4 border border-gray-200 rounded-lg shadow-lg bg-white/90 backdrop-blur-sm">
-                    <p className="text-sm font-semibold text-gray-800">{label}</p>
-                    {payload.map((entry, index) => (
-                         <p key={index} className="text-sm" style={{ color: entry.color }}>
-                              {`${entry.name}: ${entry.value}`}
-                         </p>
-                    ))}
-               </div>
-          );
-     }
-     return null;
-};
-
-interface PageProps {
-     title: string;
-}
-
-interface PacketEntry {
-     id: number;
-     src: string;
-     dst: string;
-     port: number;
-     service: string;
-     info: string;
-     attack: string;
-     threatLevel: 'low' | 'medium' | 'high' | 'critical'; // Ensure threatLevel is typed correctly
-}
-
 const Dashboard: React.FC<PageProps> = ({ title }) => {
-     const [packets, setPackets] = useState(packetData);
+     // State management
+     const [packets, setPackets] = useState<PacketEntry[]>([]);
+     const [stats, setStats] = useState<Record<string, any>>({});
+     const [trendData, setTrendData] = useState<IntrusionTrend[]>([]);
+     const [typeData, setTypeData] = useState<IntrusionType[]>([]);
+     const [loading, setLoading] = useState(true);
+     const [error, setError] = useState<string | null>(null);
 
-     const handlePacketAction = (packetId: number, action: string) => {
+     // Pagination state
+     const [currentPage, setCurrentPage] = useState(1);
+     const recordsPerPage = 5;
+     const indexOfLastRecord = currentPage * recordsPerPage;
+     const indexOfFirstRecord = indexOfLastRecord - recordsPerPage;
+     const currentRecords = packets.slice(indexOfFirstRecord, indexOfLastRecord);
+     const totalPages = Math.ceil(packets.length / recordsPerPage);
+
+     // Data fetching
+     const fetchData = useCallback(async () => {
+          try {
+               setLoading(true);
+               setError(null);
+               const [packetsData, statsData, trendsData, typesData] = await Promise.all([
+                    fetchPackets(),
+                    fetchStats(),
+                    fetchTrends(),
+                    fetchTypes()
+               ]);
+
+               setPackets(packetsData);
+               setStats(statsData);
+               setTrendData(trendsData);
+               setTypeData(typesData);
+          } catch (err) {
+               setError(err instanceof Error ? err.message : 'An error occurred');
+          } finally {
+               setLoading(false);
+          }
+     }, []);
+
+     useEffect(() => {
+          fetchData();
+          const interval = setInterval(fetchData, 30000); // Refresh every 30 seconds
+          return () => clearInterval(interval);
+     }, [fetchData]);
+
+     const handlePacketAction = async (packetId: number, action: string) => {
           if (action === 'ignore') {
-               setPackets(packets.filter(packet => packet.id !== packetId));
+               try {
+                    await ignorePacket(packetId);
+                    setPackets(packets.filter(packet => packet.id !== packetId));
+               } catch (err) {
+                    setError(err instanceof Error ? err.message : 'Failed to ignore packet');
+               }
           } else if (action === 'analyze') {
-               // Handle navigation to analytics page
                console.log(`Analyzing packet ${packetId}`);
           }
      };
 
+     if (loading) {
+          return (
+               <div className="flex items-center justify-center w-full h-screen">
+                    <Button disabled className="gap-2">
+                         <Loader className="w-4 h-4 animate-spin" />
+                         Loading dashboard...
+                    </Button>
+               </div>
+          );
+     }
+
+     if (error) {
+          return (
+               <div className="flex items-center justify-center w-full h-screen bg-gray-50">
+                    <div className="p-8 text-center">
+                         <div className="inline-flex items-center justify-center w-16 h-16 mb-4 rounded-full bg-red-100">
+                              <svg
+                                   className="w-8 h-8 text-red-500"
+                                   fill="none"
+                                   stroke="currentColor"
+                                   viewBox="0 0 24 24"
+                                   xmlns="http://www.w3.org/2000/svg"
+                              >
+                                   <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth="2"
+                                        d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                                   />
+                              </svg>
+                         </div>
+                         <h3 className="mb-2 text-xl font-semibold text-gray-900">Error Loading Dashboard</h3>
+                         <p className="mb-4 text-gray-600">{error}</p>
+                         <Button onClick={fetchData} variant="destructive">
+                              Retry
+                         </Button>
+                    </div>
+               </div>
+          );
+     }
+
      return (
-          <div className="flex flex-col w-full h-screen p-5 bg-gray-100 shadow-md lg:p-5">
+          <div className="flex flex-col w-full h-screen overflow-hidden">
                {/* Fixed Header */}
-               <div className="flex items-center justify-between p-4 duration-300 bg-white border-b rounded-tl-xl rounded-tr-xl">
+               <div className="flex items-center justify-between p-4 bg-white border-b">
                     <h1 className="text-3xl font-semibold text-gray-800">{title}</h1>
-                    
                </div>
 
                {/* Scrollable Content */}
-               <div className="flex-1 p-4 overflow-auto bg-white rounded-bl-xl">
+               <div className="flex-1 p-4 overflow-y-auto">
                     {/* Stats Cards */}
-                    <div className="grid grid-cols-1 gap-4 mb-6 sm:grid-cols-2 lg:grid-cols-4 ">
-                         {/* ... (keep existing stats cards) */}
-                         <Card className="relative p-0 overflow-hidden bg-gray-100">
-                              <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-blue-600/20" />
-                              <div className="absolute inset-[1px] bg-gray-100 rounded-lg" />
-                              <div className="relative p-4">
-                                   <CardHeader className="p-0 pb-2">
-                                        <CardTitle className="flex items-center text-lg text-gray-800">
-                                             <FaNetworkWired className="mr-2 text-2xl text-blue-500" />
-                                             Packets
-                                        </CardTitle>
-                                   </CardHeader>
-                                   <CardContent className="p-0">
-                                        <CardDescription className="text-2xl font-bold text-gray-900">
-                                             150,000
-                                        </CardDescription>
-                                        <CardDescription className="flex items-center text-base">
-                                             <span className="text-green-500">+10%</span>
-                                             <span className="ml-1 text-gray-500">From last week</span>
-                                        </CardDescription>
-                                        <Button size="sm" className="mt-3 text-sm text-white bg-black hover:bg-black/80">
-                                             View Details
-                                        </Button>
-                                   </CardContent>
-                              </div>
-                         </Card>
-
-                         <Card className="relative p-0 overflow-hidden bg-gray-100">
-                              <div className="absolute inset-0 bg-gradient-to-r from-red-500/20 to-red-600/20" />
-                              <div className="absolute inset-[1px] bg-gray-100 rounded-lg" />
-                              <div className="relative p-4">
-                                   <CardHeader className="p-0 pb-2">
-                                        <CardTitle className="flex items-center text-lg text-gray-800">
-                                             <FaShieldAlt className="mr-2 text-2xl text-red-500" />
-                                             Attacks
-                                        </CardTitle>
-                                   </CardHeader>
-                                   <CardContent className="p-0">
-                                        <CardDescription className="text-2xl font-bold text-gray-900">
-                                             5
-                                        </CardDescription>
-                                        <CardDescription className="flex items-center text-base">
-                                             <span className="text-red-500">+3</span>
-                                             <span className="ml-1 text-gray-500">Last hour</span>
-                                        </CardDescription>
-                                        <Button size="sm" className="mt-3 text-sm text-white bg-black hover:bg-black/80">
-                                             Review Logs
-                                        </Button>
-                                   </CardContent>
-                              </div>
-                         </Card>
-
-                         <Card className="relative p-0 overflow-hidden bg-gray-100">
-                              <div className="absolute inset-0 bg-gradient-to-r from-green-500/20 to-green-600/20" />
-                              <div className="absolute inset-[1px] bg-gray-100 rounded-lg" />
-                              <div className="relative p-4">
-                                   <CardHeader className="p-0 pb-2">
-                                        <CardTitle className="flex items-center text-lg text-gray-800">
-                                             <FaUserShield className="mr-2 text-2xl text-green-500" />
-                                             Intrusions
-                                        </CardTitle>
-                                   </CardHeader>
-                                   <CardContent className="p-0">
-                                        <CardDescription className="text-2xl font-bold text-gray-900">
-                                             12
-                                        </CardDescription>
-                                        <CardDescription className="flex items-center text-base">
-                                             <span className="text-green-500">+20%</span>
-                                             <span className="ml-1 text-gray-500">This month</span>
-                                        </CardDescription>
-                                        <Button size="sm" className="mt-3 text-sm text-white bg-black hover:bg-black/80">
-                                             Prevention Logs
-                                        </Button>
-                                   </CardContent>
-                              </div>
-                         </Card>
-
-                         <Card className="relative p-0 overflow-hidden bg-gray-100">
-                              <div className="absolute inset-0 bg-gradient-to-r from-yellow-500/20 to-yellow-600/20" />
-                              <div className="absolute inset-[1px] bg-gray-100 rounded-lg" />
-                              <div className="relative p-4">
-                                   <CardHeader className="p-0 pb-2">
-                                        <CardTitle className="flex items-center text-lg text-gray-800">
-                                             <FaTrafficLight className="mr-2 text-2xl text-yellow-500" />
-                                             Threats
-                                        </CardTitle>
-                                   </CardHeader>
-                                   <CardContent className="p-0">
-                                        <CardDescription className="text-2xl font-bold text-gray-900">
-                                             Moderate
-                                        </CardDescription>
-                                        <CardDescription className="flex items-center text-base">
-                                             <span className="text-red-500">-2</span>
-                                             <span className="ml-1 text-gray-500">Alerts active</span>
-                                        </CardDescription>
-                                        <Button size="sm" className="mt-3 text-sm text-white hover:bg-black/80">
-                                             Threat Details
-                                        </Button>
-                                   </CardContent>
-                              </div>
-                         </Card>
-                    </div>
+                    <StatsCards stats={stats} />
 
                     {/* Charts Section */}
                     <div className="grid grid-cols-1 gap-6 mb-6 lg:grid-cols-2">
-                         <Card className="p-4 bg-gradient-to-br from-gray-50 to-gray-100">
+                         {/* Trends Chart */}
+                         <Card className="p-4">
                               <CardHeader>
-                                   <CardTitle className="text-xl font-bold text-gray-800">Intrusion Detection Trends</CardTitle>
-                                   <CardDescription className="text-gray-600">Monthly analysis of security incidents</CardDescription>
+                                   <CardTitle>Intrusion Detection Trends</CardTitle>
+                                   <CardDescription>Monthly analysis of security incidents</CardDescription>
                               </CardHeader>
                               <CardContent>
                                    <div className="h-80">
                                         <ResponsiveContainer width="100%" height="100%">
                                              <AreaChart
-                                                  data={intrusionTrendData}
+                                                  data={trendData}
                                                   margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
                                              >
                                                   <defs>
@@ -332,26 +207,19 @@ const Dashboard: React.FC<PageProps> = ({ title }) => {
                                                             <stop offset="95%" stopColor="#4ADE80" stopOpacity={0.1} />
                                                        </linearGradient>
                                                   </defs>
-                                                  <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                                                  <XAxis dataKey="name" stroke="#6B7280" style={{ fontSize: "12px", fontFamily: "Inter" }} />
-                                                  <YAxis stroke="#6B7280" style={{ fontSize: "12px", fontFamily: "Inter" }} />
+                                                  <CartesianGrid strokeDasharray="3 3" />
+                                                  <XAxis dataKey="name" />
+                                                  <YAxis />
                                                   <Tooltip content={<CustomTooltip />} />
-                                                  <Legend
-                                                       wrapperStyle={{
-                                                            paddingTop: "20px",
-                                                            fontSize: "14px",
-                                                            fontFamily: "Inter",
-                                                       }}
-                                                  />
+                                                  <Legend />
                                                   <Area
                                                        type="monotone"
                                                        dataKey="detected"
                                                        stroke="#EF4444"
                                                        fill="url(#detectedGradient)"
                                                        strokeWidth={2}
+                                                       dot={{ r: 4 }}
                                                        activeDot={{ r: 6 }}
-                                                       animationDuration={1500}
-                                                       animationBegin={0}
                                                   />
                                                   <Area
                                                        type="monotone"
@@ -359,9 +227,8 @@ const Dashboard: React.FC<PageProps> = ({ title }) => {
                                                        stroke="#22C55E"
                                                        fill="url(#blockedGradient)"
                                                        strokeWidth={2}
+                                                       dot={{ r: 4 }}
                                                        activeDot={{ r: 6 }}
-                                                       animationDuration={1500}
-                                                       animationBegin={300}
                                                   />
                                              </AreaChart>
                                         </ResponsiveContainer>
@@ -369,58 +236,26 @@ const Dashboard: React.FC<PageProps> = ({ title }) => {
                               </CardContent>
                          </Card>
 
-                         {/* Enhanced Intrusion Types Bar Chart */}
-                         <Card className="p-4 bg-gradient-to-br from-gray-50 to-gray-100">
+                         {/* Distribution Chart */}
+                         <Card className="p-4">
                               <CardHeader>
-                                   <CardTitle className="text-xl font-bold text-gray-800">Intrusion Types Distribution</CardTitle>
-                                   <CardDescription className="text-gray-600">Analysis of attack vectors and severity</CardDescription>
+                                   <CardTitle>Intrusion Types Distribution</CardTitle>
+                                   <CardDescription>Analysis of attack vectors and severity</CardDescription>
                               </CardHeader>
                               <CardContent>
                                    <div className="h-80">
                                         <ResponsiveContainer width="100%" height="100%">
-                                             <BarChart data={intrusionTypeData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                                                  <defs>
-                                                       <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
-                                                            <stop offset="0%" stopColor="#3B82F6" stopOpacity={0.8} />
-                                                            <stop offset="100%" stopColor="#60A5FA" stopOpacity={0.8} />
-                                                       </linearGradient>
-                                                  </defs>
-                                                  <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                                                  <XAxis
-                                                       dataKey="name"
-                                                       stroke="#6B7280"
-                                                       style={{ fontSize: "12px", fontFamily: "Inter" }}
-                                                       label={{
-                                                            value: "Intrusion Types",
-                                                            position: "insideBottom",
-                                                            offset: -5,
-                                                            style: { textAnchor: "middle", fill: "#6B7280", fontSize: "14px", fontFamily: "Inter" },
-                                                       }}
-                                                  />
-                                                  <YAxis
-                                                       stroke="#6B7280"
-                                                       style={{ fontSize: "12px", fontFamily: "Inter" }}
-                                                       label={{
-                                                            value: "Count",
-                                                            angle: -90,
-                                                            position: "insideLeft",
-                                                            style: { textAnchor: "middle", fill: "#6B7280", fontSize: "14px", fontFamily: "Inter" },
-                                                       }}
-                                                  />
+                                             <BarChart data={typeData}>
+                                                  <CartesianGrid strokeDasharray="3 3" />
+                                                  <XAxis dataKey="name" />
+                                                  <YAxis />
                                                   <Tooltip />
-                                                  <Legend
-                                                       verticalAlign="bottom"
-                                                       align="center"
-                                                       wrapperStyle={{
-                                                            margin: -10,
-                                                            textAlign: "center",
-                                                            justifyContent: "center",
-                                                            fontSize: "14px",
-                                                            fontFamily: "Inter",
-                                                            color: "#6B7280",
-                                                       }}
+                                                  <Legend />
+                                                  <Bar
+                                                       dataKey="count"
+                                                       fill="#3B82F6"
+                                                       radius={[4, 4, 0, 0]}
                                                   />
-                                                  <Bar dataKey="count" fill="url(#barGradient)" />
                                              </BarChart>
                                         </ResponsiveContainer>
                                    </div>
@@ -428,70 +263,79 @@ const Dashboard: React.FC<PageProps> = ({ title }) => {
                          </Card>
                     </div>
 
-                    <div className="pb-5 mt-8">
-                         <Card className="mb-6">
-                              <CardHeader>
-                                   <CardTitle className="text-xl font-bold text-gray-800">Packet Analysis</CardTitle>
-                                   <CardDescription className="text-gray-600">Detailed network packet information and threats</CardDescription>
-                              </CardHeader>
-                              <CardContent>
-                                   <div className="border rounded-lg shadow-sm">
-                                        <div className="overflow-x-auto">
-                                             <table className="w-full border-collapse">
-                                                  <thead>
-                                                       <tr className="bg-gray-50">
-                                                            <th className="px-6 py-4 font-bold text-left text-gray-500 border-b">Source</th>
-                                                            <th className="px-6 py-4 font-bold text-left text-gray-500 border-b">Destination</th>
-                                                            <th className="px-6 py-4 font-bold text-left text-gray-500 border-b">Port</th>
-                                                            <th className="px-6 py-4 font-bold text-left text-gray-500 border-b">Service</th>
-                                                            <th className="px-6 py-4 font-bold text-left text-gray-500 border-b">Info</th>
-                                                            <th className="px-6 py-4 font-bold text-left text-gray-500 border-b">Attack</th>
-                                                            <th className="px-6 py-4 font-bold text-left text-gray-500 border-b">Threat Level</th>
-                                                            <th className="px-6 py-4 font-bold text-left text-gray-500 border-b">Actions</th>
+                    {/* Packets Table */}
+                    <Card className="mb-6">
+                         <CardHeader>
+                              <CardTitle>Packet Analysis</CardTitle>
+                              <CardDescription>Detailed network packet information and threats</CardDescription>
+                         </CardHeader>
+                         <CardContent>
+                              <div className="border rounded-lg">
+                                   <div className="overflow-x-auto">
+                                        <table className="w-full">
+                                             <thead>
+                                                  <tr className="bg-gray-50">
+                                                       <th className="p-4 text-left">Source</th>
+                                                       <th className="p-4 text-left">Destination</th>
+                                                       <th className="p-4 text-left">Port</th>
+                                                       <th className="p-4 text-left">Service</th>
+                                                       <th className="p-4 text-left">Info</th>
+                                                       <th className="p-4 text-left">Attack</th>
+                                                       <th className="p-4 text-left">Threat Level</th>
+                                                       <th className="p-4 text-left">Actions</th>
+                                                  </tr>
+                                             </thead>
+                                             <tbody>
+                                                  {currentRecords.map((packet) => (
+                                                       <tr key={packet.id} className="border-t hover:bg-gray-50">
+                                                            <td className="p-4">{packet.src}</td>
+                                                            <td className="p-4">{packet.dst}</td>
+                                                            <td className="p-4">{packet.port}</td>
+                                                            <td className="p-4">{packet.service}</td>
+                                                            <td className="p-4">{packet.info}</td>
+                                                            <td className="p-4">{packet.attack}</td>
+                                                            <td className="p-4">
+                                                                 <ThreatBadge level={packet.threatLevel} />
+                                                            </td>
+                                                            <td className="p-4">
+                                                                 <DropdownMenu>
+                                                                      <DropdownMenuTrigger asChild>
+                                                                           <Button variant="ghost" className="h-8 w-8 p-0">
+                                                                                <MoreVertical className="h-4 w-4" />
+                                                                           </Button>
+                                                                      </DropdownMenuTrigger>
+                                                                      <DropdownMenuContent align="end">
+                                                                           <DropdownMenuItem onClick={() => handlePacketAction(packet.id, 'ignore')}>
+                                                                                Ignore
+                                                                           </DropdownMenuItem>
+                                                                           <DropdownMenuItem onClick={() => handlePacketAction(packet.id, 'analyze')}>
+                                                                                Analyze
+                                                                           </DropdownMenuItem>
+                                                                      </DropdownMenuContent>
+                                                                 </DropdownMenu>
+                                                            </td>
                                                        </tr>
-                                                  </thead>
-                                                  <tbody className="bg-white divide-y divide-gray-200">
-                                                       {packets.map((packet) => (
-                                                            <tr key={packet.id} className="hover:bg-gray-50">
-                                                                 <td className="px-6 py-4 font-mono text-sm text-gray-700">{packet.src}</td>
-                                                                 <td className="px-6 py-4 font-mono text-sm text-gray-700">{packet.dst}</td>
-                                                                 <td className="px-6 py-4 text-gray-700">{packet.port}</td>
-                                                                 <td className="px-6 py-4 text-gray-700">{packet.service}</td>
-                                                                 <td className="px-6 py-4 text-gray-700">{packet.info}</td>
-                                                                 <td className="px-6 py-4 text-gray-700">{packet.attack}</td>
-                                                                 <td className="px-6 py-4">
-                                                                      <ThreatBadge level={packet.threatLevel} />
-                                                                 </td>
-                                                                 <td className="px-6 py-4">
-                                                                      <DropdownMenu>
-                                                                           <DropdownMenuTrigger asChild>
-                                                                                <Button variant="ghost" className="w-8 h-8 p-0">
-                                                                                     <MoreVertical className="w-4 h-4" />
-                                                                                </Button>
-                                                                           </DropdownMenuTrigger>
-                                                                           <DropdownMenuContent align="end">
-                                                                                <DropdownMenuItem
-                                                                                     onClick={() => handlePacketAction(packet.id, 'ignore')}
-                                                                                >
-                                                                                     Ignore
-                                                                                </DropdownMenuItem>
-                                                                                <DropdownMenuItem
-                                                                                     onClick={() => handlePacketAction(packet.id, 'analyze')}
-                                                                                >
-                                                                                     Send to Analytics
-                                                                                </DropdownMenuItem>
-                                                                           </DropdownMenuContent>
-                                                                      </DropdownMenu>
-                                                                 </td>
-                                                            </tr>
-                                                       ))}
-                                                  </tbody>
-                                             </table>
+                                                  ))}
+                                             </tbody>
+                                        </table>
+                                   </div>
+
+                                   {/* Pagination */}
+                                   <div className="flex items-center justify-between px-4 py-3 border-t">
+                                        <div className="flex justify-between w-full items-center">
+                                             <div className="text-sm text-gray-700">
+                                                  Showing {indexOfFirstRecord + 1} to {Math.min(indexOfLastRecord, packets.length)} of {packets.length} entries
+                                             </div>
+                                             <PaginationControls
+                                                  currentPage={currentPage}
+                                                  totalPages={totalPages}
+                                                  onPageChange={setCurrentPage}
+                                             />
                                         </div>
                                    </div>
-                              </CardContent>
-                         </Card>
-                    </div>
+                              </div>
+                         </CardContent>
+                    </Card>
                </div>
           </div>
      );

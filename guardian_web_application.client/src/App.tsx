@@ -1,47 +1,60 @@
-import { useState } from "react";
-import Navbar from "@/components/base/Navbar";
-import Home from "./components/Home";
-import Dashboard from "./components/Dashboard";
-import Analytics from "./components/Analytics";
-import Settings from "./components/Settings";
+import { useState, useEffect } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import Login from "./components/base/Login";
-import Register from "./components/base/Register";
+import Navbar from './components/base/Navbar';
+import Home from './components/Home';
+import Dashboard from './components/Dashboard';
+import Analytics from './components/Analytics';
+import Settings from './components/Settings';
+import { authService } from '@/components/services/authService';
 
 const App = () => {
-     const [isAuthenticated, setIsAuthenticated] = useState(false); // Manage auth state here
-     const [selectedPage, setSelectedPage] = useState("Home");
+     const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+     const [isLoading, setIsLoading] = useState(true);
+
+     useEffect(() => {
+          const checkAuth = async () => {
+               try {
+                    const isAuth = await authService.checkAuth();
+                    setIsAuthenticated(isAuth);
+                    setIsLoading(false);
+
+                    if (!isAuth) {
+                         window.location.href = '/Auth/Login';
+                    }
+               } catch (error) {
+                    console.error('Authentication check failed:', error);
+                    setIsAuthenticated(false);
+                    setIsLoading(false);
+                    window.location.href = '/Auth/Login';
+               }
+          };
+
+          checkAuth();
+     }, []);
+
+     if (isLoading) {
+          return (
+               <div className="flex items-center justify-center min-h-screen">
+                    <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+               </div>
+          );
+     }
+
+     if (!isAuthenticated) {
+          return null;
+     }
 
      return (
           <BrowserRouter>
                <div className="flex">
-                    {isAuthenticated && (
-                         <Navbar selectedPage={selectedPage} onSelectPage={setSelectedPage} />
-                    )}
-                    <div className="flex-grow">
+                    <Navbar onLogout={authService.logout} />
+                    <div className="flex-1">
                          <Routes>
-                              <Route
-                                   path="/login"
-                                   element={
-                                        isAuthenticated ? <Navigate to="/" /> : <Login setAuth={setIsAuthenticated} />
-                                   }
-                              />
-                              <Route
-                                   path="/register"
-                                   element={
-                                        isAuthenticated ? <Navigate to="/" /> : <Register setAuth={setIsAuthenticated} />
-                                   }
-                              />
-                              {isAuthenticated ? (
-                                   <>
-                                        <Route path="/dashboard" element={<Dashboard title="Dashboard" />} />
-                                        <Route path="/analytics" element={<Analytics title="Analytics" />} />
-                                        <Route path="/settings" element={<Settings title="Settings" />} />
-                                        <Route path="/" element={<Home title="Home" />} />
-                                   </>
-                              ) : (
-                                   <Route path="*" element={<Navigate to="/login" />} />
-                              )}
+                              <Route path="/" element={<Home title="Home" />} />
+                              <Route path="/dashboard" element={<Dashboard title="Dashboard" />} />
+                              <Route path="/analytics" element={<Analytics title="Analytics" />} />
+                              <Route path="/settings" element={<Settings title="Settings" />} />
+                              <Route path="*" element={<Navigate to="/" replace />} />
                          </Routes>
                     </div>
                </div>
