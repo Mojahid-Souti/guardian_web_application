@@ -4,9 +4,11 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using guardian_web_application.Server.Services;
 using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Authorization;
 
 namespace guardian_web_application.Server.Controllers
 {
+    [Authorize]
     [ApiController]
     [Route("api/[controller]")]
     public class AuthController : ControllerBase
@@ -174,7 +176,7 @@ namespace guardian_web_application.Server.Controllers
         }
 
         [HttpPost("sign-out")]
-        public async Task<SignOutResult> SignOut()
+        public  async Task<SignOutResult> SignOut()
         {
             try
             {

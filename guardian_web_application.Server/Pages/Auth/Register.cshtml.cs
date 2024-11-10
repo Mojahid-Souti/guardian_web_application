@@ -1,81 +1,98 @@
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.RazorPages;
 using System.ComponentModel.DataAnnotations;
-using System.Security.Claims;
-using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authentication.Cookies;
-using guardian_web_application.Server.Services;
+using System.Text.RegularExpressions;
 
-namespace guardian_web_application.Server.Pages.Auth
+namespace guardian_web_application.Server.Validation
 {
-    public class RegisterModel : PageModel
+    public class StrongPasswordAttribute : ValidationAttribute
     {
-        private readonly IUserService _userService;
-        private readonly IConfiguration _configuration;
+        public int MinimumLength { get; set; } = 8;
+        public bool RequireDigit { get; set; } = true;
+        public bool RequireLowercase { get; set; } = true;
+        public bool RequireUppercase { get; set; } = true;
+        public bool RequireSpecialCharacter { get; set; } = true;
+        public bool DisallowCommonPasswords { get; set; } = true;
 
-        [BindProperty]
-        public InputModel Input { get; set; } = new();
-
-        public class InputModel
+        protected override ValidationResult? IsValid(object? value, ValidationContext validationContext)
         {
-            [Required]
-            [EmailAddress]
-            [Display(Name = "Email")]
-            public string Email { get; set; } = string.Empty;
-
-            [Required]
-            [StringLength(100, ErrorMessage = "The {0} must be at least {2} and at max {1} characters long.", MinimumLength = 6)]
-            [DataType(DataType.Password)]
-            [Display(Name = "Password")]
-            public string Password { get; set; } = string.Empty;
-
-            [DataType(DataType.Password)]
-            [Display(Name = "Confirm password")]
-            [Compare("Password", ErrorMessage = "The password and confirmation password do not match.")]
-            public string ConfirmPassword { get; set; } = string.Empty;
-
-            [Required]
-            [Display(Name = "Full Name")]
-            public string FullName { get; set; } = string.Empty;
-        }
-
-        public RegisterModel(IUserService userService, IConfiguration configuration)
-        {
-            _userService = userService;
-            _configuration = configuration;
-        }
-
-        public IActionResult OnGet()
-        {
-            if (User.Identity?.IsAuthenticated ?? false)
+            if (value == null || string.IsNullOrWhiteSpace(value.ToString()))
             {
-                return Redirect(_configuration["Spa:ClientUrl"] + "/app");
-            }
-            return Page();
-        }
-
-        public async Task<IActionResult> OnPostAsync()
-        {
-            if (ModelState.IsValid)
-            {
-                var (success, message, user) = await _userService.RegisterUserAsync(
-                    Input.Email,
-                    Input.Password,
-                    Input.FullName);
-
-                if (!success || user == null)
-                {
-                    ModelState.AddModelError(string.Empty, message);
-                    return Page();
-                }
-
-                // Redirect to login page after successful registration
-                TempData["SuccessMessage"] = "Registration successful. Please log in.";
-                return RedirectToPage("./Login");
+                return new ValidationResult("Password cannot be empty.");
             }
 
-            // If we got this far, something failed, redisplay form
-            return Page();
+            var password = value.ToString();
+            var errors = new List<string>();
+
+            if (password.Length < MinimumLength)
+                errors.Add($"Password must be at least {MinimumLength} characters long.");
+
+            if (RequireDigit && !password.Any(char.IsDigit))
+                errors.Add("Password must contain at least one digit.");
+
+            if (RequireLowercase && !password.Any(char.IsLower))
+                errors.Add("Password must contain at least one lowercase letter.");
+
+            if (RequireUppercase && !password.Any(char.IsUpper))
+                errors.Add("Password must contain at least one uppercase letter.");
+
+            if (RequireSpecialCharacter && !Regex.IsMatch(password, @"[!@#$%^&*(),.?\"":{}|<>]"))
+                errors.Add("Password must contain at least one special character.");
+
+            if (DisallowCommonPasswords && IsCommonPassword(password))
+                errors.Add("This password is too common. Please choose a more unique password.");
+
+            // Check for sequential characters
+            if (HasSequentialCharacters(password))
+                errors.Add("Password cannot contain sequential characters (e.g., '123', 'abc').");
+
+            // Check for repeating characters
+            if (HasRepeatingCharacters(password))
+                errors.Add("Password cannot contain repeating characters (e.g., '111', 'aaa').");
+
+            return errors.Count == 0
+                ? ValidationResult.Success
+                : new ValidationResult(string.Join(" ", errors));
+        }
+
+        private bool IsCommonPassword(string password)
+        {
+            // Add a list of common passwords to check against
+            var commonPasswords = new HashSet<string>
+            {
+                "password123", "12345678", "qwerty123", "admin123",
+                "letmein123", "welcome123", "monkey123", "football123"
+                // Add more common passwords as needed
+            };
+
+            return commonPasswords.Contains(password.ToLower());
+        }
+
+        private bool HasSequentialCharacters(string password)
+        {
+            const string sequences = "abcdefghijklmnopqrstuvwxyz01234567890";
+            const int sequenceLength = 3;
+
+            for (int i = 0; i <= sequences.Length - sequenceLength; i++)
+            {
+                string forward = sequences.Substring(i, sequenceLength);
+                string backward = new string(forward.Reverse().ToArray());
+
+                if (password.ToLower().Contains(forward) || password.ToLower().Contains(backward))
+                    return true;
+            }
+
+            return false;
+        }
+
+        private bool HasRepeatingCharacters(string password)
+        {
+            const int maxRepeats = 3;
+            for (int i = 0; i <= password.Length - maxRepeats; i++)
+            {
+                if (password.Skip(i).Take(maxRepeats).Distinct().Count() == 1)
+                    return true;
+            }
+
+            return false;
         }
     }
 }

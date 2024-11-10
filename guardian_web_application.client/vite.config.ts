@@ -30,7 +30,6 @@ if (!fs.existsSync(certFilePath) || !fs.existsSync(keyFilePath)) {
      }
 }
 
-// Define proxy configuration
 const apiProxy: ProxyOptions = {
      target: 'https://localhost:7024',
      secure: false,
@@ -40,26 +39,18 @@ const apiProxy: ProxyOptions = {
                console.log('proxy error', err);
           });
           proxy.on('proxyReq', (proxyReq) => {
-               // Add CORS headers to the proxy request
                proxyReq.setHeader('Access-Control-Allow-Origin', 'https://localhost:5173');
                proxyReq.setHeader('Access-Control-Allow-Credentials', 'true');
           });
           proxy.on('proxyRes', (proxyRes) => {
-               // Add CORS headers to the proxy response
                proxyRes.headers['access-control-allow-origin'] = 'https://localhost:5173';
                proxyRes.headers['access-control-allow-credentials'] = 'true';
           });
      }
 };
 
-// Configuration
 export default defineConfig({
-     plugins: [
-          react({
-               // Enable Fast Refresh
-               fastRefresh: true,
-          })
-     ],
+     plugins: [react()],
      base: '/app/',
      resolve: {
           alias: {
@@ -82,24 +73,10 @@ export default defineConfig({
                     rewrite: (path) => path.replace(/^\/Auth/, '/Auth')
                }
           },
-          watch: {
-               usePolling: true,
-               interval: 1000
-          },
           hmr: {
                protocol: 'wss',
                host: 'localhost',
-               port: 5173,
-               clientPort: 5173,
-          }
-     },
-     optimizeDeps: {
-          include: ['react', 'react-dom', 'react-router-dom']
-     },
-     build: {
-          sourcemap: true,
-          commonjsOptions: {
-               include: []
+               clientPort: 5173
           }
      }
 });

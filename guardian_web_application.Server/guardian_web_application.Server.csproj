@@ -7,19 +7,27 @@
           <SpaRoot>..\guardian_web_application.client</SpaRoot>
           <SpaProxyLaunchCommand>npm run dev</SpaProxyLaunchCommand>
           <SpaProxyServerUrl>https://localhost:5173</SpaProxyServerUrl>
+          <EnableDefaultContentItems>false</EnableDefaultContentItems>
      </PropertyGroup>
 
      <ItemGroup>
-          <Content Remove="wwwroot\assets\audiowide-latin-400-normal-6GFCX7ni.woff2" />
-          <Content Remove="wwwroot\assets\audiowide-latin-400-normal-D6mHIfnv.woff" />
-          <Content Remove="wwwroot\assets\audiowide-latin-ext-400-normal-DBtZvUqR.woff" />
-          <Content Remove="wwwroot\assets\audiowide-latin-ext-400-normal-vZLf3piE.woff2" />
-          <Content Remove="wwwroot\assets\index-CpNKGAj1.css" />
-          <Content Remove="wwwroot\assets\index-DN2CGM25.js" />
-          <Content Remove="wwwroot\assets\logo-DW-4-t6A.png" />
-          <Content Remove="wwwroot\assets\logo_d-cbiNVSGP.png" />
-          <Content Remove="wwwroot\index.html" />
-          <Content Remove="wwwroot\vite.svg" />
+          <!-- Explicitly include specific content -->
+          <Content Include="wwwroot\assets\**\*.*">
+               <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+          </Content>
+          <Content Include="wwwroot\images\**\*.*">
+               <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+          </Content>
+          <Content Include="wwwroot\index.html">
+               <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+          </Content>
+          <Content Include="wwwroot\vite.svg">
+               <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+          </Content>
+
+          <!-- Include Razor Pages content -->
+          <Content Include="Pages\**\*.cshtml" />
+          <Content Include="Views\**\*.cshtml" />
      </ItemGroup>
 
      <ItemGroup>
@@ -49,17 +57,13 @@
           </ProjectReference>
      </ItemGroup>
 
+     <!-- Configuration files -->
      <ItemGroup>
-          <None Include="wwwroot\assets\audiowide-latin-400-normal-6GFCX7ni.woff2" />
-          <None Include="wwwroot\assets\audiowide-latin-400-normal-D6mHIfnv.woff" />
-          <None Include="wwwroot\assets\audiowide-latin-ext-400-normal-DBtZvUqR.woff" />
-          <None Include="wwwroot\assets\audiowide-latin-ext-400-normal-vZLf3piE.woff2" />
-          <None Include="wwwroot\assets\index-CpNKGAj1.css" />
-          <None Include="wwwroot\assets\index-DN2CGM25.js" />
-          <None Include="wwwroot\assets\logo-DW-4-t6A.png" />
-          <None Include="wwwroot\assets\logo_d-cbiNVSGP.png" />
-          <None Include="wwwroot\index.html" />
-          <None Include="wwwroot\vite.svg" />
+          <Content Include="appsettings.json">
+               <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+          </Content>
+          <Content Include="appsettings.Development.json">
+               <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+          </Content>
      </ItemGroup>
-
 </Project>

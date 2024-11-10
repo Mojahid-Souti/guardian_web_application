@@ -4,6 +4,7 @@ using guardian_web_application.Server.Data;
 using guardian_web_application.Server.Services;
 using Microsoft.AspNetCore.Cors;
 using System.Reflection;
+using Microsoft.Extensions.FileProviders;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -31,11 +32,10 @@ builder.Services.AddCors(options =>
                 "https://localhost:7024",
                 "http://localhost:5264"
             )
-            .AllowAnyHeader()
             .AllowAnyMethod()
+            .AllowAnyHeader()
             .AllowCredentials()
-            .WithExposedHeaders("Location")
-            .SetIsOriginAllowed(_ => true);
+            .SetIsOriginAllowed(_ => true); // Be careful with this in production
     });
 });
 
@@ -47,32 +47,30 @@ builder.Services.AddScoped<IPacketService, PacketService>();
 builder.Services.AddScoped<IAnalyticsService, AnalyticsService>();
 
 // Configure Authentication
-builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
-    .AddCookie(options =>
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+})
+.AddCookie(options =>
+{
+    options.Cookie.Name = "GuardianAuth";
+    options.Cookie.SameSite = SameSiteMode.None;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+    options.Events = new CookieAuthenticationEvents
     {
-        options.LoginPath = "/Auth/Login";
-        options.LogoutPath = "/Auth/Logout";
-        options.AccessDeniedPath = "/Auth/Login";
-        options.Cookie.Name = "GuardianAuth";
-        options.Cookie.HttpOnly = true;
-        options.Cookie.SameSite = SameSiteMode.Lax;
-        options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
-        options.ExpireTimeSpan = TimeSpan.FromHours(24);
-        options.SlidingExpiration = true;
-        options.Events = new CookieAuthenticationEvents
+        OnRedirectToLogin = context =>
         {
-            OnRedirectToLogin = context =>
+            if (context.Request.Path.StartsWithSegments("/api"))
             {
-                if (context.Request.Path.StartsWithSegments("/api"))
-                {
-                    context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-                    return Task.CompletedTask;
-                }
-                context.Response.Redirect(context.RedirectUri);
+                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
                 return Task.CompletedTask;
             }
-        };
-    });
+            context.Response.Redirect(context.RedirectUri);
+            return Task.CompletedTask;
+        }
+    };
+});
 
 builder.Services.AddAuthorization();
 
@@ -82,23 +80,6 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.UseDeveloperExceptionPage();
-
-    // Add CORS middleware for development
-    app.Use(async (context, next) =>
-    {
-        context.Response.Headers.Add("Access-Control-Allow-Origin", "https://localhost:5173");
-        context.Response.Headers.Add("Access-Control-Allow-Credentials", "true");
-        context.Response.Headers.Add("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-        context.Response.Headers.Add("Access-Control-Allow-Headers", "Content-Type, Authorization");
-
-        if (context.Request.Method == "OPTIONS")
-        {
-            context.Response.StatusCode = 200;
-            return;
-        }
-
-        await next();
-    });
 }
 else
 {
@@ -107,10 +88,44 @@ else
 }
 
 app.UseHttpsRedirection();
-app.UseStaticFiles();
+
+// Configure static files with custom options
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(
+        Path.Combine(Directory.GetCurrentDirectory(), "wwwroot")),
+    RequestPath = "",
+    OnPrepareResponse = ctx =>
+    {
+        ctx.Context.Response.Headers.Append(
+            "Cache-Control", $"public, max-age=600");
+    }
+});
+
 app.UseRouting();
 
+// Use CORS before Authentication and Authorization
 app.UseCors("AllowViteClient");
+
+// Add CORS headers middleware
+app.Use(async (context, next) =>
+{
+    if (app.Environment.IsDevelopment())
+    {
+        context.Response.Headers.Append("Access-Control-Allow-Origin", "https://localhost:5173");
+        context.Response.Headers.Append("Access-Control-Allow-Credentials", "true");
+        context.Response.Headers.Append("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+        context.Response.Headers.Append("Access-Control-Allow-Headers", "Content-Type, Authorization");
+
+        if (context.Request.Method == "OPTIONS")
+        {
+            context.Response.StatusCode = 200;
+            return;
+        }
+    }
+
+    await next();
+});
 
 app.UseAuthentication();
 app.UseAuthorization();
@@ -118,7 +133,6 @@ app.UseAuthorization();
 // Root redirect with proper async
 app.MapGet("/", async (HttpContext context) =>
 {
-    await Task.Yield();
     if (context.User.Identity?.IsAuthenticated ?? false)
     {
         return Results.Redirect($"{app.Configuration["Spa:ClientUrl"]}/app");
@@ -131,9 +145,8 @@ app.MapControllers().RequireCors("AllowViteClient");
 app.MapRazorPages();
 
 // Health check endpoint
-app.MapGet("/api/health", async () =>
+app.MapGet("/api/health", () =>
 {
-    await Task.Yield();
     return Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow });
 })
 .RequireCors("AllowViteClient")
@@ -146,7 +159,6 @@ if (app.Environment.IsDevelopment())
     {
         if (context.Request.Path.StartsWithSegments("/app"))
         {
-            await Task.Yield();
             if (context.User.Identity?.IsAuthenticated ?? false)
             {
                 var targetUrl = $"{app.Configuration["Spa:ClientUrl"]}{context.Request.Path}{context.Request.QueryString}";
@@ -160,4 +172,7 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-await app.RunAsync(); // Use RunAsync instead of Run
+// Map fallback for SPA
+app.MapFallbackToFile("/app/{**path}", "index.html");
+
+await app.RunAsync();

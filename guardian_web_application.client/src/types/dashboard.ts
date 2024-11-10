@@ -1,3 +1,4 @@
+// dashboard.ts
 export interface PacketEntry {
      id: number;
      src: string;
@@ -33,4 +34,14 @@ export interface IntrusionType {
 
 export interface PageProps {
      title: string;
+}
+
+export interface CustomTooltipProps {
+     active?: boolean;
+     payload?: Array<{
+          name: string;
+          value: number;
+          color: string;
+     }>;
+     label?: string;
 }

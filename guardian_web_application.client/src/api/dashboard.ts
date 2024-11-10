@@ -1,10 +1,12 @@
-import { PacketEntry, IntrusionTrend, IntrusionType, DashboardStats } from '../types/dashboard';
+import { PacketEntry, IntrusionTrend, IntrusionType, DashboardStats } from '@/types/dashboard';
 
 const API_BASE_URL = 'https://localhost:7024/api';  // Use the HTTPS URL
+
 
 const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
      try {
           const response = await fetch(url, {
+
                ...options,
                credentials: 'include',
                headers: {
